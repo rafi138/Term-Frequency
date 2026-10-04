@@ -1,6 +1,15 @@
+import math
 from operator import itemgetter
+
 class tfIDF():
     def __init__(self,doc):
+        if not isinstance(doc, (list, tuple)):
+            raise TypeError('doc must be a list of strings')
+        if len(doc) == 0:
+            raise ValueError('doc must contain at least one document')
+        for d in doc:
+            if not isinstance(d, str):
+                raise TypeError('every document must be a string')
         self.doc = [x.split() for x in doc]
         self.wordSet = self.getWordset(self.doc)
         self.wordDict = self.getWorddict(self.doc)
@@ -23,7 +32,6 @@ class tfIDF():
         return wordDict
 
     def computeIDF(self,docList):
-        import math
         idfDict = {}
         N = len(docList)
 
@@ -50,26 +58,34 @@ class tfIDF():
         for x in range(0,len(self.doc)):
             tfidf_out.append(self.computeTFIDF(x, idfs))
         self.tfidf = tfidf_out
-        return list(tfidf_out)
+        return [dict(scores) for scores in tfidf_out]
 
     def getSCORE(self):
+        # make sure scores exist even if getTFIDF was never called
+        self.getTFIDF()
         score = []
         for u in range(0,len(self.tfidf)):
             score.append(0)
             for i in self.tfidf[u]:
                 score[u] += self.tfidf[u][i]
         return score
-    
+
     def getIDF(self):
-        return self.idf
+        return dict(self.idf)
 
     def getWORDSET(self):
-        return self.wordSet
-    
+        return set(self.wordSet)
+
     def getWORDDICT(self):
-        return self.wordDict
-    
+        return [dict(counts) for counts in self.wordDict]
+
     def search(self,query):
+        if not isinstance(query, str):
+            raise TypeError('query must be a string')
+        # match on whole tokens, case-insensitively; a plain substring check
+        # would let partial tokens (e.g. 'am' inside 'name') score documents
+        query_tokens = set(query.lower().split())
+
         query_tfidf = []
 
         num = 0
@@ -77,7 +93,7 @@ class tfIDF():
         for i in tfidf_out:
             query_tfidf.append(0.0)
             for u in i:
-                if u in query:
+                if u.lower() in query_tokens:
                     query_tfidf[num] += i[u]
             num = num + 1
         
